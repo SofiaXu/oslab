@@ -1,0 +1,7 @@
+.tmp/
+.cache/
+build/
+dist/
+__pycache__/
+*.pyc
+*.core

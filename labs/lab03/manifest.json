@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "lab": "lab03",
+  "runner_number": 3,
+  "baseline": "vendor/linux-0.11 (72 system calls, modern GCC compatibility applied)",
+  "apply_order": [
+    "copy baseline to build/lab03/{impl}/kernel",
+    "patch -p1 < {impl}/kernel.patch",
+    "copy {impl}/kernel/* into workspace kernel/"
+  ],
+  "implementations": [
+    "student",
+    "reference"
+  ],
+  "syscalls": {
+    "72": "trace_read",
+    "73": "trace_quantum"
+  },
+  "guest_compiler": "python3 tools/guest_build.py SOURCE OUTPUT",
+  "guest_sources": [
+    "guest/*.c",
+    "{impl}/guest/*.c"
+  ],
+  "guest_install": {
+    "process": "/lab/process"
+  },
+  "pass_markers": [
+    "LAB03 PASS"
+  ],
+  "interactive_disk": "build/lab03/{impl}/rootfs.img",
+  "acceptance_disk": "build/lab03/{impl}/check-{quantum}.img",
+  "incompatible_overlays": [
+    "lab01",
+    "lab03",
+    "lab02-kernel"
+  ],
+  "student_default": "ENOSYS/TODO; acceptance must fail until completed"
+}

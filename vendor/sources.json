@@ -1,0 +1,13 @@
+{
+  "linux-0.11": {
+    "repository": "https://github.com/yuan-xy/Linux-0.11",
+    "commit": "c2e45a7f55ba61029be3b74cd7e72f23bbd068d6",
+    "archive": "https://codeload.github.com/yuan-xy/Linux-0.11/tar.gz/c2e45a7f55ba61029be3b74cd7e72f23bbd068d6"
+  },
+  "rootfs": {
+    "url": "https://raw.githubusercontent.com/yuan-xy/Linux-0.11/c2e45a7f55ba61029be3b74cd7e72f23bbd068d6/hdc-0.11.img",
+    "sha256": "0f57a2ebca218ed52844d4769f35fce32d9fce850d9cc0509c6c3c6e4a07c7f4",
+    "bytes": 62447616,
+    "license": "Historical root filesystem: individual programs retain their own notices; not covered by suite license. Download only; not distributed in student archive."
+  }
+}

@@ -1,0 +1,15 @@
+USER alice
+USER bob
+LOGIN alice
+CREATE secret rw
+CREATE readonly r
+OPEN readonly
+WRITE readonly forbidden
+DELETE readonly
+OPEN secret
+CREATE third rw
+OPEN third
+LOGIN bob
+OPEN secret
+LIST
+QUIT

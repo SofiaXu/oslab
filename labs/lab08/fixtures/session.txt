@@ -1,0 +1,19 @@
+USER alice
+USER bob
+LOGIN alice
+CREATE notes rw
+CREATE app x
+OPEN notes
+WRITE notes hello
+READ notes
+OPEN app
+EXEC app
+LIST
+CLOSE notes
+DELETE notes
+LOGIN bob
+CREATE notes r
+OPEN notes
+READ notes
+LIST
+QUIT

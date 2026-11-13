@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "lab": "lab02-kernel",
+  "runner_number": 9,
+  "baseline": "vendor/linux-0.11 (72 system calls, modern GCC compatibility applied)",
+  "apply_order": [
+    "copy baseline to build/lab02-kernel/{impl}/kernel",
+    "patch -p1 < {impl}/kernel.patch",
+    "copy {impl}/kernel/* into workspace kernel/"
+  ],
+  "implementations": [
+    "student",
+    "reference"
+  ],
+  "syscalls": {
+    "72": "sem_open",
+    "73": "sem_wait",
+    "74": "sem_post",
+    "75": "sem_unlink"
+  },
+  "guest_compiler": "python3 tools/guest_build.py SOURCE OUTPUT",
+  "guest_sources": [
+    "guest/*.c",
+    "{impl}/guest/*.c"
+  ],
+  "guest_install": {
+    "sem_test": "/lab/sem_test",
+    "pc": "/lab/pc"
+  },
+  "pass_markers": [
+    "LAB02-KERNEL PASS",
+    "LAB02-PC PASS"
+  ],
+  "interactive_disk": "build/lab02-kernel/{impl}/rootfs.img",
+  "acceptance_disk": "build/lab02-kernel/{impl}/check-{quantum}.img",
+  "incompatible_overlays": [
+    "lab01",
+    "lab03",
+    "lab02-kernel"
+  ],
+  "student_default": "ENOSYS/TODO; acceptance must fail until completed"
+}

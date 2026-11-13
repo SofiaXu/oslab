@@ -1,0 +1,125 @@
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -106,6 +106,8 @@
+ 	struct desc_struct ldt[3];
+ /* tss for this task */
+ 	struct tss_struct tss;
++	/* Lab 5: append only; system_call.s relies on the original offsets. */
++	unsigned long kernel_esp;
+ };
+ 
+ /*
+@@ -164,26 +166,10 @@
+ 	"shrl $4,%%eax" \
+ 	:"=a" (n) \
+ 	:"a" (0),"i" (FIRST_TSS_ENTRY<<3))
+-/*
+- *	switch_to(n) should switch tasks to task nr n, first
+- * checking that n isn't the current task, in which case it does nothing.
+- * This also clears the TS-flag if the task we switched to has used
+- * tha math co-processor latest.
+- */
+-#define switch_to(n) {\
+-struct {long a,b;} __tmp; \
+-__asm__("cmpl %%ecx,current\n\t" \
+-	"je 1f\n\t" \
+-	"movw %%dx,%1\n\t" \
+-	"xchgl %%ecx,current\n\t" \
+-	"ljmp *%0\n\t" \
+-	"cmpl %%ecx,last_task_used_math\n\t" \
+-	"jne 1f\n\t" \
+-	"clts\n" \
+-	"1:" \
+-	::"m" (*&__tmp.a),"m" (*&__tmp.b), \
+-	"d" (_TSS(n)),"c" ((long) task[n])); \
+-}
++/* Lab 5: cdecl call; no inline assembly clobber assumptions. */
++extern struct tss_struct *lab5_bootstrap_tss;
++extern void lab5_switch(struct task_struct *next, unsigned long ldt_selector);
++#define switch_to(n) lab5_switch(task[(n)], _LDT(n))
+ 
+ #define PAGE_ALIGN(n) (((n)+0xfff)&0xfffff000)
+ 
+--- a/kernel/sched.c
++++ b/kernel/sched.c
+@@ -56,6 +56,8 @@
+ };
+ 
+ static union task_union init_task = {INIT_TASK,};
++/* TR is loaded once by sched_init(); only this TSS supplies ring-0 ESP. */
++struct tss_struct *lab5_bootstrap_tss = &init_task.task.tss;
+ 
+ long volatile jiffies=0;
+ long startup_time=0;
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -17,6 +17,7 @@
+ #include <linux/kernel.h>
+ #include <asm/segment.h>
+ #include <asm/system.h>
++#include "lab5.h"
+ 
+ extern void write_verify(unsigned long address);
+ 
+@@ -116,7 +117,10 @@
+ 	p->tss.ldt = _LDT(nr);
+ 	p->tss.trace_bitmap = 0x80000000;
+ 	if (last_task_used_math == current)
+-		__asm__("clts ; fnsave %0"::"m" (p->tss.i387));
++		/* FNSAVE resets the live x87. Restore the parent's state immediately;
++		 * otherwise last_task_used_math still names a now-reset owner. */
++		__asm__ volatile("clts ; fnsave %0 ; frstor %0"
++			: "+m" (p->tss.i387) : : "memory");
+ 	if (copy_mem(nr,p)) {
+ 		task[nr] = NULL;
+ 		free_page((long) p);
+@@ -133,6 +137,9 @@
+ 		current->executable->i_count++;
+ 	set_tss_desc(gdt+(nr<<1)+FIRST_TSS_ENTRY,&(p->tss));
+ 	set_ldt_desc(gdt+(nr<<1)+FIRST_LDT_ENTRY,&(p->ldt));
++	/* Student overlay leaves this empty while using the hardware scaffold. */
++	lab5_init_stack(p, ebp, edi, esi, gs, ebx, ecx, edx,
++		fs, es, ds, eip, cs, eflags, esp, ss);
+ 	p->state = TASK_RUNNING;	/* do this last, just in case */
+ 	return last_pid;
+ }
+--- a/kernel/system_call.s
++++ b/kernel/system_call.s
+@@ -64,6 +64,7 @@
+  * Ok, I get parallel printer interrupts while using the floppy for some
+  * strange reason. Urgel. Now I just ignore them.
+  */
++.globl ret_from_sys_call
+ .globl system_call,sys_fork,timer_interrupt,sys_execve
+ .globl hd_interrupt,floppy_interrupt,parallel_interrupt
+ .globl device_not_available, coprocessor_error
+--- a/kernel/Makefile
++++ b/kernel/Makefile
+@@ -35,12 +35,26 @@
+ 	panic.o printk.o vsprintf.o sys.o exit.o \
+ 	signal.o mktime.o
+ 
++# Lab 5 overlays are copied here before building. .S needs preprocessing.
++OBJS += lab5.o lab5_switch.o
++
+ kernel.o: $(OBJS)
+ 	@$(LD) $(LDFLAGS) -o kernel.o $(OBJS)
+ 	@sync
+ 
++lab5_offsets.inc: lab5_offsets.c lab5.h ../include/linux/sched.h
++	$(CC) $(CFLAGS) -S -o lab5_offsets.tmp.s lab5_offsets.c
++	sed -n '/^[[:space:]]*\.equ /p' lab5_offsets.tmp.s > $@
++	rm -f lab5_offsets.tmp.s
++
++lab5_switch.o: lab5_switch.S lab5_offsets.inc
++	$(CC) $(CFLAGS) -c -o $@ lab5_switch.S
++
++lab5.o: lab5.c lab5.h ../include/linux/sched.h
++fork.o: lab5.h
++
+ clean:
+-	@rm -f core *.o *.a tmp_make keyboard.s
++	@rm -f core *.o *.a tmp_make keyboard.s lab5_offsets.inc lab5_offsets.tmp.s
+ 	@for i in *.c;do rm -f `basename $$i .c`.s;done
+ 	@for i in chr_drv blk_drv math; do make clean -C $$i; done
+ 

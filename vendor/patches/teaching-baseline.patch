@@ -1,0 +1,86 @@
+--- a/Makefile.header
++++ b/Makefile.header
+@@ -6,7 +6,7 @@
+ 	#LDFLAGS = -m elf_i386 -x 
+ 	LDFLAGS = -m elf_i386
+ 	CC	= gcc
+-	CFLAGS  = -g -m32 -fno-builtin -fno-stack-protector -fomit-frame-pointer -fstrength-reduce #-Wall
++	CFLAGS  = -g -m32 -fno-builtin -fno-stack-protector -fomit-frame-pointer -fstrength-reduce -std=gnu89 -march=i386 -fno-pie -fno-pic -mno-sse -mno-mmx -msoft-float -mpreferred-stack-boundary=2 -mincoming-stack-boundary=2 #-Wall
+ 
+ 	CPP	= cpp -nostdinc
+ 	AR	= ar
+@@ -25,7 +25,7 @@
+ 	LDFLAGS = -m elf_i386
+ 	#CC	= i386-elf-gcc-4.3.2
+ 	CC	= i386-elf-gcc
+-	CFLAGS  = -gdwarf-2 -g3 -m32 -fno-builtin -fno-stack-protector -fomit-frame-pointer -fstrength-reduce #-Wall
++	CFLAGS  = -gdwarf-2 -g3 -m32 -fno-builtin -fno-stack-protector -fomit-frame-pointer -fstrength-reduce -std=gnu89 -march=i386 -fno-pie -fno-pic -mno-sse -mno-mmx -msoft-float -mpreferred-stack-boundary=2 -mincoming-stack-boundary=2 #-Wall
+ 
+ 	#CPP	= i386-elf-cpp-4.3.2 -nostdinc
+ 	CPP	= i386-elf-cpp -nostdinc
+--- a/kernel/Makefile
++++ b/kernel/Makefile
+@@ -33,7 +33,7 @@
+ 
+ OBJS  = sched.o system_call.o traps.o asm.o fork.o \
+ 	panic.o printk.o vsprintf.o sys.o exit.o \
+-	signal.o mktime.o who.o
++	signal.o mktime.o
+ 
+ kernel.o: $(OBJS)
+ 	@$(LD) $(LDFLAGS) -o kernel.o $(OBJS)
+@@ -85,4 +85,3 @@
+   ../include/linux/mm.h ../include/signal.h ../include/linux/kernel.h \
+   ../include/asm/system.h ../include/asm/segment.h ../include/asm/io.h
+ vsprintf.s vsprintf.o: vsprintf.c ../include/stdarg.h ../include/string.h
+-who.s who.o: who.c ../include/linux/kernel.h ../include/unistd.h 
+--- a/kernel/system_call.s
++++ b/kernel/system_call.s
+@@ -58,7 +58,7 @@
+ sa_flags = 8
+ sa_restorer = 12
+ 
+-nr_system_calls = 74
++nr_system_calls = 72
+ 
+ /*
+  * Ok, I get parallel printer interrupts while using the floppy for some
+--- a/include/linux/sys.h
++++ b/include/linux/sys.h
+@@ -70,8 +70,6 @@
+ extern int sys_ssetmask();
+ extern int sys_setreuid();
+ extern int sys_setregid();
+-extern int sys_iam();
+-extern int sys_whoami();
+ 
+ fn_ptr sys_call_table[] = { sys_setup, sys_exit, sys_fork, sys_read,
+ sys_write, sys_open, sys_close, sys_waitpid, sys_creat, sys_link,
+@@ -85,4 +83,4 @@
+ sys_lock, sys_ioctl, sys_fcntl, sys_mpx, sys_setpgid, sys_ulimit,
+ sys_uname, sys_umask, sys_chroot, sys_ustat, sys_dup2, sys_getppid,
+ sys_getpgrp, sys_setsid, sys_sigaction, sys_sgetmask, sys_ssetmask,
+-sys_setreuid,sys_setregid, sys_iam, sys_whoami };
++sys_setreuid,sys_setregid };
+--- a/include/unistd.h
++++ b/include/unistd.h
+@@ -129,8 +129,6 @@
+ #define __NR_ssetmask	69
+ #define __NR_setreuid	70
+ #define __NR_setregid	71
+-#define __NR_iam		72
+-#define __NR_whoami		73
+ 
+ #define _syscall0(type,name) \
+   type name(void) \
+--- a/boot/bootsect.s
++++ b/boot/bootsect.s
+@@ -255,7 +255,7 @@
+ 
+ msg1:
+ 	.byte 13,10
+-	.ascii "IceCityOS is booting ..."
++	.ascii "Linux 0.11 is booting ..."
+ 	.byte 13,10,13,10
+ 
+ 	.org 508
